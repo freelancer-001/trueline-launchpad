@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Phone, Wrench, Droplets, Flame, Search, PipetteIcon, Waves, Bath, ShowerHead,
   ShieldCheck, Clock, BadgeCheck, DollarSign, ThumbsUp, Users, Cpu, MapPin,
@@ -7,6 +8,7 @@ import {
   Calendar, PhoneCall, Truck, Facebook, Instagram, Twitter,
 } from "lucide-react";
 import heroImg from "@/assets/hero-plumber.jpg";
+import { submitBooking } from "@/server-functions/booking";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -83,11 +85,23 @@ function Index() {
   const [navOpen, setNavOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [form, setForm] = useState({ name: "", phone: "", service: serviceOptions[0], message: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleBook = (e: React.FormEvent) => {
+  const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
-    const text = `Hi, I would like to book a plumbing appointment.\n\nName: ${form.name}\nPhone: ${form.phone}\nService Needed: ${form.service}\n\nProblem Description:\n${form.message}\n\nPlease contact me regarding my appointment.`;
-    window.open(buildWaUrl(text), "_blank");
+    setIsSubmitting(true);
+    try {
+      await submitBooking({ data: form });
+      toast.success("Request sent! We'll call you shortly to confirm your appointment.");
+      setForm({ name: "", phone: "", service: serviceOptions[0], message: "" });
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        err instanceof Error ? err.message : "Something went wrong. Please call us directly.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -385,9 +399,9 @@ function Index() {
           <div>
             <div className="mb-3 inline-block rounded-full bg-brand/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand">Book Online</div>
             <h2 className="font-display text-3xl font-extrabold text-navy sm:text-4xl">Book Your Appointment</h2>
-            <p className="mt-3 text-muted-foreground">Fill out the form and we'll open WhatsApp with your details pre-filled. Our dispatcher will confirm within minutes.</p>
+            <p className="mt-3 text-muted-foreground">Fill out the form and our dispatch team is notified instantly. We'll confirm your appointment by phone within minutes.</p>
             <ul className="mt-6 space-y-3 text-sm">
-              {["Instant WhatsApp confirmation","Same-day service available","Upfront, honest pricing","Licensed and insured technicians"].map(t => (
+              {["Instant dispatch notification","Same-day service available","Upfront, honest pricing","Licensed and insured technicians"].map(t => (
                 <li key={t} className="flex items-center gap-2 text-navy"><CheckCircle2 className="h-5 w-5 text-brand" />{t}</li>
               ))}
             </ul>
@@ -403,28 +417,32 @@ function Index() {
             <div className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-navy">Full Name</label>
-                <input required value={form.name} onChange={e => setForm({...form, name: e.target.value})}
-                  className="w-full rounded-lg border border-input bg-background px-4 py-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20" placeholder="John Smith" />
+                <input required disabled={isSubmitting} value={form.name} onChange={e => setForm({...form, name: e.target.value})}
+                  className="w-full rounded-lg border border-input bg-background px-4 py-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-60" placeholder="John Smith" />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-navy">Phone Number</label>
-                <input required type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
-                  className="w-full rounded-lg border border-input bg-background px-4 py-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20" placeholder="(214) 555-0123" />
+                <input required disabled={isSubmitting} type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
+                  className="w-full rounded-lg border border-input bg-background px-4 py-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-60" placeholder="(214) 555-0123" />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-navy">Service Needed</label>
-                <select value={form.service} onChange={e => setForm({...form, service: e.target.value})}
-                  className="w-full rounded-lg border border-input bg-background px-4 py-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20">
+                <select disabled={isSubmitting} value={form.service} onChange={e => setForm({...form, service: e.target.value})}
+                  className="w-full rounded-lg border border-input bg-background px-4 py-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-60">
                   {serviceOptions.map(o => <option key={o}>{o}</option>)}
                 </select>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-navy">Message</label>
-                <textarea required rows={4} value={form.message} onChange={e => setForm({...form, message: e.target.value})}
-                  className="w-full resize-none rounded-lg border border-input bg-background px-4 py-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20" placeholder="Describe your plumbing issue..." />
+                <textarea required disabled={isSubmitting} rows={4} value={form.message} onChange={e => setForm({...form, message: e.target.value})}
+                  className="w-full resize-none rounded-lg border border-input bg-background px-4 py-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-60" placeholder="Describe your plumbing issue..." />
               </div>
-              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl gradient-cta px-6 py-4 text-base font-bold text-cta-foreground shadow-cta hover:translate-y-[-1px] transition">
-                <MessageCircle className="h-5 w-5" /> Book Appointment via WhatsApp
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex w-full items-center justify-center gap-2 rounded-xl gradient-cta px-6 py-4 text-base font-bold text-cta-foreground shadow-cta transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60 disabled:translate-y-0"
+              >
+                <Calendar className="h-5 w-5" /> {isSubmitting ? "Sending..." : "Book Appointment"}
               </button>
               <p className="text-center text-xs text-muted-foreground">By submitting you agree to be contacted about your appointment.</p>
             </div>
