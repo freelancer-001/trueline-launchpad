@@ -400,7 +400,7 @@ function Index() {
               "https://calendly.com/trueline-plumbing/service-appointment"
             */}
             <InlineWidget
-              url="https://calendly.com/aadityabhansali02/30min"
+              url="https://calendly.com/aadityabhansali02/60mins"
               styles={{ height: "700px", width: "100%" }}
             />
           </div>
